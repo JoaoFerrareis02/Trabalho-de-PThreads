@@ -8,7 +8,8 @@
 
 /*Definidor da matriz N x N*/	
 
-#define MAX 10000
+#define LIN 100
+#define COL 100
 
 /*Variáveis globais*/
 
@@ -52,15 +53,15 @@ int** alocarMatriz()
 {
 	int** mat;
 	int i;
-	mat = malloc(MAX * sizeof(int*)); /*Aloca um vetor de ponteiros para as linhas*/
+	mat = malloc(LIN * sizeof(int*)); /*Aloca um vetor de ponteiros para as linhas*/
 	if (mat == NULL) /*Caso o vetor for nulo, retorna o erro*/
 	{
 		printf("** Erro: Memória Insuficiente **");
 		return NULL;
 	}
-	for (i = 0; i < MAX; i++)
+	for (i = 0; i < LIN; i++)
 	{
-		mat[i] = malloc(MAX * sizeof(int)); /*Aloca um vetor para cada uma das linhas*/
+		mat[i] = malloc(COL * sizeof(int)); /*Aloca um vetor para cada uma das linhas*/
 		if (mat[i] == NULL) /*Caso o vetor for nulo, retorna o erro*/
 		{
 			printf("** Erro: Memória Insuficiente **");
@@ -74,7 +75,7 @@ int** desalocarMatriz()
 {
 	int i;
 	if (mat == NULL) return NULL; /*Se a matriz for nula, retorne nulo*/
-	for (i = 0; i < MAX; i++) free(mat[i]); /*Para cada elemento no vetor de linhas da matriz, se desaloca com free()*/
+	for (i = 0; i < LIN; i++) free(mat[i]); /*Para cada elemento no vetor de linhas da matriz, se desaloca com free()*/
 	free(mat); /*Desaloca o vetor de linhas com o free()*/
 	return NULL;
 }
@@ -84,9 +85,9 @@ void inserirValoresEContarNumeros()
 	int i, j;
 	time_t t;
 	srand((unsigned)time(&t)); /*Inicia o gerador de números randomicos*/
-	for (i = 0; i < MAX; i++)
+	for (i = 0; i < LIN; i++)
 	{
-		for (j = 0; j < MAX; j++)
+		for (j = 0; j < COL; j++)
 		{
 			mat[i][j] = (rand() % 32000); /*Para cada elemento na matriz, insere um valor randomico de 0 a 31999*/
 			if (ehPrimo(mat[i][j])) qtdNumerosPrimos++; /*Para cada elemento na matriz, se o elemento for primo soma 1 ao contador*/
