@@ -5,11 +5,12 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <time.h>
+#include <math.h>
 
-/*Definidor da matriz N x N*/	
+/*Definidor da matriz N x M*/	
 
-#define LIN 100
-#define COL 100
+#define LIN 10000
+#define COL 10000
 
 /*Variáveis globais*/
 
@@ -42,7 +43,7 @@ int ehPrimo(int numero)
 {
 	int i;
 	if (numero == 0 || numero == 1) return 0; /*Retorna falso caso os valores forem 0 ou 1*/
-	for (i = 2; i < numero; i++)
+	for (i = 2; i <= sqrt(numero); i++)
 	{
 		if (numero % i == 0) return 0; /*Caso o resto da divisão entre o número e i for zero, o número não é primo (falso)*/
 	}
