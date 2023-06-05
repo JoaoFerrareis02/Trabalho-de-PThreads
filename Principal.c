@@ -11,26 +11,26 @@
 #include <time.h>
 #include <math.h>
 
-/*Definição da quantidade de linhas e colunas de uma matriz N x M*/
+/*DefiniÃ§Ã£o da quantidade de linhas e colunas de uma matriz N x M*/
 
 #define LIN 10000
 #define COL 10000
 
-/*Definição dos valores de verdadeiro (1) e falso (0) */
+/*DefiniÃ§Ã£o dos valores de verdadeiro (1) e falso (0) */
 
 #define FALSE 0
 #define TRUE 1
 
-/*Definição da quantidade de Threads implementadas*/
+/*DefiniÃ§Ã£o da quantidade de Threads implementadas*/
 
 #define NUM_THREADS 8
 
-/*Variáveis globais (matriz e contador de números primos)*/
+/*VariÃ¡veis globais (matriz e contador de nÃºmeros primos)*/
 
 int** mat;
 int contadorPrimos = 0;
 
-/*Estrutura que contem dados sobre as linhas de início e término para a
+/*Estrutura que contem dados sobre as linhas de inÃ­cio e tÃ©rmino para a
 leitura da matriz por uma thread */
 
 typedef struct
@@ -39,29 +39,29 @@ typedef struct
 	int linhaFinal;
 } LinhasMacrobloco;
 
-/*Variável global mutex*/
+/*VariÃ¡vel global mutex*/
 
 pthread_mutex_t mutex;
 
-/*Função que retorna se o valor é primo ou não*/
+/*FunÃ§Ã£o que retorna se o valor Ã© primo ou nÃ£o*/
 
 int ehPrimo(int numero);
 
-/*Funções de alocação e desalocação de valores de memória da matriz*/
+/*FunÃ§Ãµes de alocaÃ§Ã£o e desalocaÃ§Ã£o de valores de memÃ³ria da matriz*/
 
 int** alocarMatriz();
 int** desalocarMatriz();
 
-/*Função de inserimento de valores randomicos na matriz (0 a 31999)*/
+/*FunÃ§Ã£o de inserimento de valores randomicos na matriz (0 a 31999)*/
 
 void inserirValores();
 
-/*Funções de contagem do modo Serial e Paralelo*/
+/*FunÃ§Ãµes de contagem do modo Serial e Paralelo*/
 
 void contagemSerial();
 void contagemParalela();
 
-/*Função usada pelas Threads para a contagem de valores primos*/
+/*FunÃ§Ã£o usada pelas Threads para a contagem de valores primos*/
 
 void* contador(void*);
 
@@ -69,37 +69,37 @@ int main(int argc, char* argv[])
 {
 
 	double tempo1, tempo2;/*Tempo marcado de cada contagem*/
-	clock_t tInicio, tFim;/*Cronometros de início e fim*/
+	clock_t tInicio, tFim;/*Cronometros de inÃ­cio e fim*/
 
-	mat = alocarMatriz(); /*Aloca a memória para a matriz*/
+	mat = alocarMatriz(); /*Aloca a memÃ³ria para a matriz*/
 
 	inserirValores(); /*Insere os valores randomicos na matriz*/
 
-	tInicio = clock(); /*Inicia o cronômetro*/
+	tInicio = clock(); /*Inicia o cronÃ´metro*/
 
-	contagemSerial(); /*Inicia a função de contagem do estilo Serial*/
+	contagemSerial(); /*Inicia a funÃ§Ã£o de contagem do estilo Serial*/
 
-	tFim = clock(); /*Termina o cronômetro*/
+	tFim = clock(); /*Termina o cronÃ´metro*/
 
 	tempo1 = (double)(tFim - tInicio) / CLOCKS_PER_SEC; /*Valor de segundos do primeiro tempo marcado*/
 
 	printf("Quantidade de elementos primos na matriz por busca serial: %d\n", contadorPrimos);
 	printf("Tempo total de contagem: %f segundos\n\n", tempo1);
 
-	contadorPrimos = 0; /*Zera o contador de números primos*/
+	contadorPrimos = 0; /*Zera o contador de nÃºmeros primos*/
 
-	tInicio = clock(); /*Inicia o cronômetro*/
+	tInicio = clock(); /*Inicia o cronÃ´metro*/
 
-	contagemParalela(); /*Inicia a função de contagem do estilo Paralelo*/
+	contagemParalela(); /*Inicia a funÃ§Ã£o de contagem do estilo Paralelo*/
 
-	tFim = clock(); /*Termina o cronômetro*/
+	tFim = clock(); /*Termina o cronÃ´metro*/
 
 	tempo2 = (double)(tFim - tInicio) / CLOCKS_PER_SEC; /*Valor de segundos do primeiro tempo marcado*/
 
 	printf("Quantidade de elementos primos na matriz por busca paralela: %d\n", contadorPrimos);
 	printf("Tempo total de contagem: %f segundos\n", tempo2);
 
-	mat = desalocarMatriz(); /*Desaloca a memória da matriz*/
+	mat = desalocarMatriz(); /*Desaloca a memÃ³ria da matriz*/
 
 	return 0;
 
@@ -110,11 +110,11 @@ int ehPrimo(int numero)
 
 	int i;
 
-	/*Se o número for zero ou um, retorna falso*/
+	/*Se o nÃºmero for zero ou um, retorna falso*/
 
 	if (numero == 0 || numero == 1) return FALSE;
 
-	/*Dos valores 2 a raiz do número, se o resto do número pelo valor for 
+	/*Dos valores 2 a raiz do nÃºmero, se o resto do nÃºmero pelo valor for 
 	igual a zero, retorna falso*/
 
 	for (i = 2; i <= sqrt(numero); i++)
@@ -134,21 +134,21 @@ int** alocarMatriz()
 	int** mat; /*Instancia um valor local para matriz*/
 	int i;
 
-	/*Faz a alocação dinâmica de um vetor do tamnho da linha, com 
+	/*Faz a alocaÃ§Ã£o dinÃ¢mica de um vetor do tamnho da linha, com 
 	ponteiro de inteiros*/
 
 	mat = malloc(LIN * sizeof(int*));
 
-	/*Caso o mat for nulo, ouve erro na alocação*/
+	/*Caso o mat for nulo, ouve erro na alocaÃ§Ã£o*/
 
 	if (mat == NULL)
 	{
-		printf("** Erro: Memória Insuficiente **");
+		printf("** Erro: MemÃ³ria Insuficiente **");
 		return NULL;
 	}
 
-	/*Para cada valor desse vetor, se faz a alocação dinâmica do tamanho de
-	colunas da matriz. Caso der nulo um dos ponteiros, ouve erro de alocação*/
+	/*Para cada valor desse vetor, se faz a alocaÃ§Ã£o dinÃ¢mica do tamanho de
+	colunas da matriz. Caso der nulo um dos ponteiros, ouve erro de alocaÃ§Ã£o*/
 
 	for (i = 0; i < LIN; i++)
 	{
@@ -157,7 +157,7 @@ int** alocarMatriz()
 
 		if (mat[i] == NULL)
 		{
-			printf("** Erro: Memória Insuficiente **");
+			printf("** Erro: MemÃ³ria Insuficiente **");
 			return NULL;
 		}
 
@@ -186,13 +186,12 @@ void inserirValores()
 {
 
 	int i, j;
-	time_t t;
+	
+	/*Inicia o gerador de nÃºmeros randÃ´micos, com a semente de valor 200*/
 
-	/*Inicia o gerador de números randômicos*/
+	srand(200);
 
-	srand((unsigned)time(&t));
-
-	/*Para cada elemento na matriz, instancia um valor randômico de 
+	/*Para cada elemento na matriz, instancia um valor randÃ´mico de 
 	0 a 31999*/
 
 	for (i = 0; i < LIN; i++)
@@ -211,7 +210,7 @@ void contagemSerial()
 	int i, j;
 
 	/*Para cada elemento presente na matriz, se o elemento
-	for primo, soma 1 ao contador de números primos*/
+	for primo, soma 1 ao contador de nÃºmeros primos*/
 
 	for (i = 0; i < LIN; i++)
 	{
@@ -229,7 +228,7 @@ void contagemParalela()
 	int i;
 
 	pthread_t tid[NUM_THREADS]; /*Vetor de indentificadores da Thread*/
-	LinhasMacrobloco linhas[NUM_THREADS]; /*Vetor das estruturas delimitação do macrobloco*/
+	LinhasMacrobloco linhas[NUM_THREADS]; /*Vetor das estruturas delimitaÃ§Ã£o do macrobloco*/
 
 	pthread_mutex_init(&mutex, NULL); /*Cria e iniaciliza o mutex lock*/
 
@@ -237,8 +236,8 @@ void contagemParalela()
 	int linhasExtras = LIN % NUM_THREADS;
 	int linhaInicial = 0;
 
-	/*Criação das Threads com o argumento recebido sendo a Struct contendo
-	as linhas de início e fim da leitura*/
+	/*CriaÃ§Ã£o das Threads com o argumento recebido sendo a Struct contendo
+	as linhas de inÃ­cio e fim da leitura*/
 
 	for (i = 0; i < NUM_THREADS; i++)
 	{
@@ -284,7 +283,7 @@ void* contador(void* arg)
 
 	int i, j;
 
-	int contadorLocal = 0; /*Inicia um contador de números primos local*/
+	int contadorLocal = 0; /*Inicia um contador de nÃºmeros primos local*/
 
 	LinhasMacrobloco* linhas = (LinhasMacrobloco*)arg;
 
