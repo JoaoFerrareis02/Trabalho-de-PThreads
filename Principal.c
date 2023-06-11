@@ -13,13 +13,13 @@
 
 /*Definição da quantidade de linhas e colunas de uma matriz N x M*/
 
-#define LIN 9
-#define COL 9
+#define LIN 10000
+#define COL 10000
 
 /*Definição da quantidade de linhas e colunas do macrobloco*/
 
-#define MLIN 3
-#define MCOL 3
+#define MLIN 1000
+#define MCOL 1000
 
 /*Definição do numero de macroblocos por linha e coluna*/
 
@@ -33,27 +33,20 @@
 
 /*Definição da quantidade de Threads implementadas*/
 
-#define NUM_THREADS 16
+#define NUM_THREADS 8
 
 /*Variáveis globais (matriz, vetor para rastrear quais macroblocos ja foram processados e contador de números primos)*/
 
 int** mat;
-int macroblocosProcessados[MACROLINHAS][MACROCOLUNAS] = { 0 };
 int contadorPrimos = 0;
 
-/*Estrutura que contem dados sobre as linhas de início e término para a
-leitura da matriz por uma thread */
+/*Matriz que represente as regiões de cada macrobloco, todas iniciadas com o valor 0*/
 
-typedef struct
-{
-	int id;
-} Macrobloco;
+int macroblocosProcessados[MACROLINHAS][MACROCOLUNAS] = { 0 };
 
-/*Variáveis globais mutex*/
+/*Variável global mutex*/
 
-pthread_mutex_t contadorMutex;
-pthread_mutex_t macroblocoMutex;
-
+pthread_mutex_t mutex;
 
 /*Função que retorna se o valor é primo ou não*/
 
@@ -239,18 +232,14 @@ void contagemParalela()
 
 	int i;
 
-	pthread_t tid[NUM_THREADS]; /*Vetor de indentificadores da Thread*/
-	Macrobloco macrobloco[NUM_THREADS]; /*Vetor das estruturas delimitação do macrobloco*/
+	pthread_mutex_init(&mutex, NULL); /*Inicia o mutex*/
 
-	pthread_mutex_init(&contadorMutex, NULL);
-	pthread_mutex_init(&macroblocoMutex, NULL);
+	pthread_t tid[NUM_THREADS]; /*Vetor de indentificadores da Thread*/
 
 	for (i = 0; i < NUM_THREADS; i++)
 	{
 
-		macrobloco[i].id = i;
-
-		if (pthread_create(&(tid[i]), NULL, contador, (void*)&macrobloco[i]) != 0)
+		if (pthread_create(&(tid[i]), NULL, contador, NULL) != 0)
 		{
 			perror("Pthread_create falhou!");
 			exit(1);
@@ -269,8 +258,7 @@ void contagemParalela()
 
 	}
 
-	pthread_mutex_destroy(&contadorMutex);
-	pthread_mutex_destroy(&macroblocoMutex);
+	pthread_mutex_destroy(&mutex); /*Destroi o mutex*/
 
 }
 
@@ -279,34 +267,39 @@ void* contador(void* arg)
 
 	int contadorLocal = 0; /*Inicia um contador de números primos local*/
 
-	Macrobloco* macrobloco = (Macrobloco*)arg;
 
-	int id = macrobloco->id;
+	/*Se faz um laço for para a leitura compartilhada entre as threads da matriz de regiões de macroblocos*/
 
-	for (int i = 0; i < MACROLINHAS; i++)
+	for (int macroLinhas = 0; macroLinhas < MACROLINHAS; macroLinhas++)
 	{
-		for (int j = 0; j < MACROCOLUNAS; j++)
+		for (int macroColunas = 0; macroColunas < MACROCOLUNAS; macroColunas++)
 		{
 
-			pthread_mutex_lock(&macroblocoMutex);
-			if (macroblocosProcessados[i][j])
+			pthread_mutex_lock(&mutex); /*Faz o lock (região crítica que faz modificação na matriz de regiões)*/
+
+			if (macroblocosProcessados[macroLinhas][macroColunas]) /*Caso o valor da matriz for igual a 1, significa que esse macrobloco já foi lido*/
 			{
-				pthread_mutex_unlock(&macroblocoMutex);
-				continue;
+				pthread_mutex_unlock(&mutex); 
+				
+				continue; /*Pula para o próximo valor (j+1)*/
 			}
-			macroblocosProcessados[i][j] = 1;
-			pthread_mutex_unlock(&macroblocoMutex);
 
-			int linhaInicial = i * MLIN;
-			int linhaFinal = linhaInicial + MLIN;
-			int colunaInicial = j * MCOL;
-			int colunaFinal = colunaInicial + MCOL;
+			macroblocosProcessados[macroLinhas][macroColunas] = 1; /*Caso o valor for 0, adiciona o valor 1 na matriz representando que essa região foi lida*/
+			
+			pthread_mutex_unlock(&mutex); /*Destrava o mutex da região crítica */
 
-			for (int a = linhaInicial; a < linhaFinal; a++)
+			int linhaInicial = macroLinhas * MLIN; /*Linha inicial do macrobloco*/
+			int linhaFinal = linhaInicial + MLIN; /*Linha final do macrobloco*/
+			int colunaInicial = macroColunas * MCOL; /*Coluna inicial do macrobloco*/
+			int colunaFinal = colunaInicial + MCOL; /*Coluna final do macrobloco*/
+
+			/*Leitura do macrobloco, somando ao contador local quando o valor for primo*/
+
+			for (int i = linhaInicial; i < linhaFinal; i++)
 			{
-				for (int b = colunaInicial; b < colunaFinal; b++)
+				for (int j = colunaInicial; j < colunaFinal; j++)
 				{
-					if (ehPrimo(mat[a][b]))  
+					if (ehPrimo(mat[i][j]))  
 					{
 						contadorLocal++;
 					}
@@ -315,9 +308,9 @@ void* contador(void* arg)
 		}
 	}
 
-	pthread_mutex_lock(&contadorMutex);
+	pthread_mutex_lock(&mutex); /*Faz o lock (região crítica que acrescenta o valor local ao valor global)*/
 	contadorPrimos += contadorLocal;
-	pthread_mutex_unlock(&contadorMutex);
+	pthread_mutex_unlock(&mutex); /*Destrava o mutex da região crítica */
 
 	pthread_exit(0); /*Ternina a Thread, retornando 0*/
 
