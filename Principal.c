@@ -13,8 +13,18 @@
 
 /*Definição da quantidade de linhas e colunas de uma matriz N x M*/
 
-#define LIN 10000
-#define COL 10000
+#define LIN 9
+#define COL 9
+
+/*Definição da quantidade de linhas e colunas do macrobloco*/
+
+#define MLIN 3
+#define MCOL 3
+
+/*Definição do numero de macroblocos por linha e coluna*/
+
+#define MACROLINHAS (LIN / MLIN)
+#define MACROCOLUNAS (COL / MCOL)
 
 /*Definição dos valores de verdadeiro (1) e falso (0) */
 
@@ -23,11 +33,12 @@
 
 /*Definição da quantidade de Threads implementadas*/
 
-#define NUM_THREADS 8
+#define NUM_THREADS 16
 
-/*Variáveis globais (matriz e contador de números primos)*/
+/*Variáveis globais (matriz, vetor para rastrear quais macroblocos ja foram processados e contador de números primos)*/
 
 int** mat;
+int macroblocosProcessados[MACROLINHAS][MACROCOLUNAS] = { 0 };
 int contadorPrimos = 0;
 
 /*Estrutura que contem dados sobre as linhas de início e término para a
@@ -35,13 +46,14 @@ leitura da matriz por uma thread */
 
 typedef struct
 {
-	int linhaInicial;
-	int linhaFinal;
-} LinhasMacrobloco;
+	int id;
+} Macrobloco;
 
-/*Variável global mutex*/
+/*Variáveis globais mutex*/
 
-pthread_mutex_t mutex;
+pthread_mutex_t contadorMutex;
+pthread_mutex_t macroblocoMutex;
+
 
 /*Função que retorna se o valor é primo ou não*/
 
@@ -114,7 +126,7 @@ int ehPrimo(int numero)
 
 	if (numero == 0 || numero == 1) return FALSE;
 
-	/*Dos valores 2 a raiz do número, se o resto do número pelo valor for 
+	/*Dos valores 2 a raiz do número, se o resto do número pelo valor for
 	igual a zero, retorna falso*/
 
 	for (i = 2; i <= sqrt(numero); i++)
@@ -134,7 +146,7 @@ int** alocarMatriz()
 	int** mat; /*Instancia um valor local para matriz*/
 	int i;
 
-	/*Faz a alocação dinâmica de um vetor do tamnho da linha, com 
+	/*Faz a alocação dinâmica de um vetor do tamnho da linha, com
 	ponteiro de inteiros*/
 
 	mat = malloc(LIN * sizeof(int*));
@@ -186,12 +198,12 @@ void inserirValores()
 {
 
 	int i, j;
-	
+
 	/*Inicia o gerador de números randômicos, com a semente de valor 200*/
 
 	srand(200);
 
-	/*Para cada elemento na matriz, instancia um valor randômico de 
+	/*Para cada elemento na matriz, instancia um valor randômico de
 	0 a 31999*/
 
 	for (i = 0; i < LIN; i++)
@@ -228,38 +240,21 @@ void contagemParalela()
 	int i;
 
 	pthread_t tid[NUM_THREADS]; /*Vetor de indentificadores da Thread*/
-	LinhasMacrobloco linhas[NUM_THREADS]; /*Vetor das estruturas delimitação do macrobloco*/
+	Macrobloco macrobloco[NUM_THREADS]; /*Vetor das estruturas delimitação do macrobloco*/
 
-	pthread_mutex_init(&mutex, NULL); /*Cria e iniaciliza o mutex lock*/
-
-	int quantidadeLinhas = LIN / NUM_THREADS;
-	int linhasExtras = LIN % NUM_THREADS;
-	int linhaInicial = 0;
-
-	/*Criação das Threads com o argumento recebido sendo a Struct contendo
-	as linhas de início e fim da leitura*/
+	pthread_mutex_init(&contadorMutex, NULL);
+	pthread_mutex_init(&macroblocoMutex, NULL);
 
 	for (i = 0; i < NUM_THREADS; i++)
 	{
 
-		int linhaFinal = linhaInicial + quantidadeLinhas;
+		macrobloco[i].id = i;
 
-		if (linhasExtras > 0)
-		{
-			linhaFinal++;
-			linhasExtras--;
-		}
-
-		linhas[i].linhaInicial = linhaInicial;
-		linhas[i].linhaFinal = linhaFinal;
-
-		if (pthread_create(&(tid[i]), NULL, contador, (void*)&linhas[i]) != 0)
+		if (pthread_create(&(tid[i]), NULL, contador, (void*)&macrobloco[i]) != 0)
 		{
 			perror("Pthread_create falhou!");
 			exit(1);
 		}
-
-		linhaInicial = linhaFinal;
 	}
 
 	/*Join nas Threads*/
@@ -274,35 +269,55 @@ void contagemParalela()
 
 	}
 
-	pthread_mutex_destroy(&mutex); /*Desaloca as estruturas do mutex*/
+	pthread_mutex_destroy(&contadorMutex);
+	pthread_mutex_destroy(&macroblocoMutex);
 
 }
 
 void* contador(void* arg)
 {
 
-	int i, j;
-
 	int contadorLocal = 0; /*Inicia um contador de números primos local*/
 
-	LinhasMacrobloco* linhas = (LinhasMacrobloco*)arg;
+	Macrobloco* macrobloco = (Macrobloco*)arg;
 
-	int linhaInicial = linhas->linhaInicial;
-	int linhaFinal = linhas->linhaFinal;
+	int id = macrobloco->id;
 
-	for (i = linhaInicial; i < linhaFinal; i++)
+	for (int i = 0; i < MACROLINHAS; i++)
 	{
-		for (j = 0; j < COL; j++)
+		for (int j = 0; j < MACROCOLUNAS; j++)
 		{
-			if (ehPrimo(mat[i][j])) contadorLocal++;
+
+			pthread_mutex_lock(&macroblocoMutex);
+			if (macroblocosProcessados[i][j])
+			{
+				pthread_mutex_unlock(&macroblocoMutex);
+				continue;
+			}
+			macroblocosProcessados[i][j] = 1;
+			pthread_mutex_unlock(&macroblocoMutex);
+
+			int linhaInicial = i * MLIN;
+			int linhaFinal = linhaInicial + MLIN;
+			int colunaInicial = j * MCOL;
+			int colunaFinal = colunaInicial + MCOL;
+
+			for (int a = linhaInicial; a < linhaFinal; a++)
+			{
+				for (int b = colunaInicial; b < colunaFinal; b++)
+				{
+					if (ehPrimo(mat[a][b]))  
+					{
+						contadorLocal++;
+					}
+				}
+			}
 		}
 	}
 
-	pthread_mutex_lock(&mutex); /*Adiquire o mutex lock*/
-
-	contadorPrimos += contadorLocal; /*Soma o valor local ao valor global*/
-
-	pthread_mutex_unlock(&mutex); /*Libera o mutex lock*/
+	pthread_mutex_lock(&contadorMutex);
+	contadorPrimos += contadorLocal;
+	pthread_mutex_unlock(&contadorMutex);
 
 	pthread_exit(0); /*Ternina a Thread, retornando 0*/
 
