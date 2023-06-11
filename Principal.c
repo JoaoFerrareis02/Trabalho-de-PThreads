@@ -37,7 +37,7 @@
 
 /*Definição da quantidade de Threads implementadas*/
 
-#define NUM_THREADS 8
+#define NUM_THREADS 4
 
 /*Variáveis globais (matriz e contador de números primos)*/
 
@@ -52,27 +52,15 @@ int** matrizRegioes;
 
 pthread_mutex_t mutex;
 
-/*Função que retorna se o valor é primo ou não*/
+/*Funções usadas*/
 
 int ehPrimo(int numero);
-
-/*Funções de alocação e desalocação de valores de memória da matriz*/
-
 int** alocarMatriz();
 int** desalocarMatriz();
-
-/*Funções de alocação e desalocação de valores de memória da matriz de regiões*/
-
 int** alocarMatrizRegioes();
-int** desalocarMatrizRegioes(); 
-
-/*Funções de contagem do modo Serial e Paralelo*/
-
+int** desalocarMatrizRegioes();
 void contagemSerial();
 void contagemParalela();
-
-/*Função usada pelas Threads para a contagem de valores primos*/
-
 void* contador(void*);
 
 int main(int argc, char* argv[])
@@ -82,7 +70,7 @@ int main(int argc, char* argv[])
 	clock_t tInicio, tFim;/*Cronometros de início e fim*/
 
 	matriz = alocarMatriz(); /*Aloca a memória para a matriz, inserindo os valores randomicos de 0 31999*/
-	matrizRegioes = alocarMatrizRegioes(); /*Aloca a memória para a matriz de regiões de cada macrobloco, inserindo o valor 0*/
+	matrizRegioes = alocarMatrizRegioes(); /*Aloca a memória para a matriz de regiões de cada macrobloco, inserindo o valor 0*/ 
 
 	tInicio = clock(); /*Inicia o cronômetro*/
 
@@ -115,6 +103,9 @@ int main(int argc, char* argv[])
 
 }
 
+
+/*Função que retorna se o valor é primo ou não*/
+
 int ehPrimo(int numero)
 {
 
@@ -138,11 +129,13 @@ int ehPrimo(int numero)
 
 }
 
+/*Funções de alocação e desalocação de valores de memória da matriz*/
+
 int** alocarMatriz()
 {
 
 	int** matriz; /*Instancia um valor local para matriz*/
-	int i,j;
+	int i, j;
 
 	/*Inicia o gerador de números randômicos*/
 
@@ -207,11 +200,13 @@ int** desalocarMatriz()
 
 }
 
-int** alocarMatrizRegioes() 
+/*Funções de alocação e desalocação de valores de memória da matriz de regiões*/
+
+int** alocarMatrizRegioes()
 {
 
 	int** matrizRegioes; /*Instancia um valor local para matriz de regiões*/
-	int i,j; 
+	int i, j;
 
 	/*Faz a alocação dinâmica de um vetor do tamnho da linha, com
 	ponteiro de inteiros*/
@@ -232,7 +227,7 @@ int** alocarMatrizRegioes()
 	for (i = 0; i < QTD_MACR0BLOCO_LINHAS; i++)
 	{
 
-		matrizRegioes[i] = malloc(QTD_MACR0BLOCO_COLUNAS * sizeof(int)); 
+		matrizRegioes[i] = malloc(QTD_MACR0BLOCO_COLUNAS * sizeof(int));
 
 		if (matrizRegioes[i] == NULL)
 		{
@@ -265,11 +260,13 @@ int** desalocarMatrizRegioes()
 
 	for (i = 0; i < QTD_MACR0BLOCO_LINHAS; i++) free(matrizRegioes[i]); /*Para cada elemento no vetor de linhas da matriz, de um free()*/
 
-	free(matrizRegioes); /*De um free() no vetor de linhas*/ 
+	free(matrizRegioes); /*De um free() no vetor de linhas*/
 
 	return NULL; /*Retorne nulo*/
 
 }
+
+/*Funções de contagem do modo Serial e Paralelo*/
 
 void contagemSerial()
 {
@@ -324,6 +321,8 @@ void contagemParalela()
 
 }
 
+/*Função usada pelas Threads para a contagem de valores primos*/
+
 void* contador(void* arg)
 {
 
@@ -340,19 +339,19 @@ void* contador(void* arg)
 
 			if (matrizRegioes[macroLinhas][macroColunas]) /*Caso o valor da matriz for igual a 1, significa que esse macrobloco já foi lido*/
 			{
-				pthread_mutex_unlock(&mutex); 
-				
+				pthread_mutex_unlock(&mutex);
+
 				continue; /*Pula para o próximo valor (j+1)*/
 			}
 
 			matrizRegioes[macroLinhas][macroColunas] = 1; /*Caso o valor for 0, adiciona o valor 1 na matriz representando que essa região foi lida*/
-			
+
 			pthread_mutex_unlock(&mutex); /*Destrava o mutex da região crítica */
 
-			int linhaInicial = macroLinhas * LIHNA_MACROBLOCO; /*Linha inicial do macrobloco*/ 
-			int linhaFinal = linhaInicial + LIHNA_MACROBLOCO; /*Linha final do macrobloco*/ 
-			int colunaInicial = macroColunas * COLUNA_MACROBLOCO; /*Coluna inicial do macrobloco*/ 
-			int colunaFinal = colunaInicial + COLUNA_MACROBLOCO; /*Coluna final do macrobloco*/ 
+			int linhaInicial = macroLinhas * LIHNA_MACROBLOCO; /*Linha inicial do macrobloco*/
+			int linhaFinal = linhaInicial + LIHNA_MACROBLOCO; /*Linha final do macrobloco*/
+			int colunaInicial = macroColunas * COLUNA_MACROBLOCO; /*Coluna inicial do macrobloco*/
+			int colunaFinal = colunaInicial + COLUNA_MACROBLOCO; /*Coluna final do macrobloco*/
 
 			/*Leitura do macrobloco, somando ao contador local quando o valor for primo*/
 
@@ -360,7 +359,7 @@ void* contador(void* arg)
 			{
 				for (int j = colunaInicial; j < colunaFinal; j++)
 				{
-					if (ehPrimo(matriz[i][j]))  
+					if (ehPrimo(matriz[i][j]))
 					{
 						contadorLocal++;
 					}
