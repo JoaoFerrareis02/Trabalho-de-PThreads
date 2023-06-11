@@ -13,36 +13,40 @@
 
 /*Definição da quantidade de linhas e colunas de uma matriz N x M*/
 
-#define LIN 10000
-#define COL 10000
+#define LINHA 10000 
+#define COLUNA 10000 
 
 /*Definição da quantidade de linhas e colunas do macrobloco*/
 
-#define MLIN 1000
-#define MCOL 1000
+#define LIHNA_MACROBLOCO 100
+#define COLUNA_MACROBLOCO 100
 
 /*Definição do numero de macroblocos por linha e coluna*/
 
-#define MACROLINHAS (LIN / MLIN)
-#define MACROCOLUNAS (COL / MCOL)
+#define QTD_MACR0BLOCO_LINHAS (LINHA / LIHNA_MACROBLOCO) 
+#define QTD_MACR0BLOCO_COLUNAS (COLUNA / COLUNA_MACROBLOCO) 
 
 /*Definição dos valores de verdadeiro (1) e falso (0) */
 
 #define FALSE 0
 #define TRUE 1
 
+/*Definição da semente de geração de números randômicos*/
+
+#define SEED 200
+
 /*Definição da quantidade de Threads implementadas*/
 
 #define NUM_THREADS 8
 
-/*Variáveis globais (matriz, vetor para rastrear quais macroblocos ja foram processados e contador de números primos)*/
+/*Variáveis globais (matriz e contador de números primos)*/
 
-int** mat;
+int** matriz;
 int contadorPrimos = 0;
 
 /*Matriz que represente as regiões de cada macrobloco, todas iniciadas com o valor 0*/
 
-int macroblocosProcessados[MACROLINHAS][MACROCOLUNAS] = { 0 };
+int** matrizRegioes;
 
 /*Variável global mutex*/
 
@@ -57,9 +61,10 @@ int ehPrimo(int numero);
 int** alocarMatriz();
 int** desalocarMatriz();
 
-/*Função de inserimento de valores randomicos na matriz (0 a 31999)*/
+/*Funções de alocação e desalocação de valores de memória da matriz de regiões*/
 
-void inserirValores();
+int** alocarMatrizRegioes();
+int** desalocarMatrizRegioes(); 
 
 /*Funções de contagem do modo Serial e Paralelo*/
 
@@ -76,9 +81,8 @@ int main(int argc, char* argv[])
 	double tempo1, tempo2;/*Tempo marcado de cada contagem*/
 	clock_t tInicio, tFim;/*Cronometros de início e fim*/
 
-	mat = alocarMatriz(); /*Aloca a memória para a matriz*/
-
-	inserirValores(); /*Insere os valores randomicos na matriz*/
+	matriz = alocarMatriz(); /*Aloca a memória para a matriz, inserindo os valores randomicos de 0 31999*/
+	matrizRegioes = alocarMatrizRegioes(); /*Aloca a memória para a matriz de regiões de cada macrobloco, inserindo o valor 0*/
 
 	tInicio = clock(); /*Inicia o cronômetro*/
 
@@ -104,7 +108,8 @@ int main(int argc, char* argv[])
 	printf("Quantidade de elementos primos na matriz por busca paralela: %d\n", contadorPrimos);
 	printf("Tempo total de contagem: %f segundos\n", tempo2);
 
-	mat = desalocarMatriz(); /*Desaloca a memória da matriz*/
+	matriz = desalocarMatriz(); /*Desaloca a memória da matriz*/
+	matrizRegioes = desalocarMatrizRegioes(); /*Desaloca a memória da matriz de regiões*/
 
 	return 0;
 
@@ -115,9 +120,9 @@ int ehPrimo(int numero)
 
 	int i;
 
-	/*Se o número for zero ou um, retorna falso*/
+	/*Se o número for menor que 2, retorna falso*/
 
-	if (numero == 0 || numero == 1) return FALSE;
+	if (numero < 2) return FALSE;
 
 	/*Dos valores 2 a raiz do número, se o resto do número pelo valor for
 	igual a zero, retorna falso*/
@@ -136,17 +141,21 @@ int ehPrimo(int numero)
 int** alocarMatriz()
 {
 
-	int** mat; /*Instancia um valor local para matriz*/
-	int i;
+	int** matriz; /*Instancia um valor local para matriz*/
+	int i,j;
+
+	/*Inicia o gerador de números randômicos*/
+
+	srand(SEED);
 
 	/*Faz a alocação dinâmica de um vetor do tamnho da linha, com
 	ponteiro de inteiros*/
 
-	mat = malloc(LIN * sizeof(int*));
+	matriz = malloc(LINHA * sizeof(int*));
 
-	/*Caso o mat for nulo, ouve erro na alocação*/
+	/*Caso a matriz for nulo, ouve erro na alocação*/
 
-	if (mat == NULL)
+	if (matriz == NULL)
 	{
 		printf("** Erro: Memória Insuficiente **");
 		return NULL;
@@ -155,12 +164,12 @@ int** alocarMatriz()
 	/*Para cada valor desse vetor, se faz a alocação dinâmica do tamanho de
 	colunas da matriz. Caso der nulo um dos ponteiros, ouve erro de alocação*/
 
-	for (i = 0; i < LIN; i++)
+	for (i = 0; i < LINHA; i++)
 	{
 
-		mat[i] = malloc(COL * sizeof(int));
+		matriz[i] = malloc(COLUNA * sizeof(int));
 
-		if (mat[i] == NULL)
+		if (matriz[i] == NULL)
 		{
 			printf("** Erro: Memória Insuficiente **");
 			return NULL;
@@ -168,7 +177,18 @@ int** alocarMatriz()
 
 	}
 
-	return mat; /*Retorna a matriz*/
+	/*Para cada elemento na matriz, instancia um valor randômico de
+	0 a 31999*/
+
+	for (i = 0; i < LINHA; i++)
+	{
+		for (j = 0; j < COLUNA; j++)
+		{
+			matriz[i][j] = (rand() % 32000);
+		}
+	}
+
+	return matriz; /*Retorna a matriz*/
 
 }
 
@@ -177,35 +197,77 @@ int** desalocarMatriz()
 
 	int i;
 
-	if (mat == NULL) return NULL; /*Caso a matriz for nula, retorna nulo*/
+	if (matriz == NULL) return NULL; /*Caso a matriz for nula, retorna nulo*/
 
-	for (i = 0; i < LIN; i++) free(mat[i]); /*Para cada elemento no vetor de linhas da matriz, de um free()*/
+	for (i = 0; i < LINHA; i++) free(matriz[i]); /*Para cada elemento no vetor de linhas da matriz, de um free()*/
 
-	free(mat); /*De um free() no vetor de linhas*/
+	free(matriz); /*De um free() no vetor de linhas*/
 
 	return NULL; /*Retorne nulo*/
 
 }
 
-void inserirValores()
+int** alocarMatrizRegioes() 
 {
 
-	int i, j;
+	int** matrizRegioes; /*Instancia um valor local para matriz de regiões*/
+	int i,j; 
 
-	/*Inicia o gerador de números randômicos, com a semente de valor 200*/
+	/*Faz a alocação dinâmica de um vetor do tamnho da linha, com
+	ponteiro de inteiros*/
 
-	srand(200);
+	matrizRegioes = malloc(QTD_MACR0BLOCO_LINHAS * sizeof(int*));
 
-	/*Para cada elemento na matriz, instancia um valor randômico de
-	0 a 31999*/
+	/*Caso o mat for nulo, ouve erro na alocação*/
 
-	for (i = 0; i < LIN; i++)
+	if (matrizRegioes == NULL)
 	{
-		for (j = 0; j < COL; j++)
+		printf("** Erro: Memória Insuficiente **");
+		return NULL;
+	}
+
+	/*Para cada valor desse vetor, se faz a alocação dinâmica do tamanho de
+	colunas da matriz. Caso der nulo um dos ponteiros, ouve erro de alocação*/
+
+	for (i = 0; i < QTD_MACR0BLOCO_LINHAS; i++)
+	{
+
+		matrizRegioes[i] = malloc(QTD_MACR0BLOCO_COLUNAS * sizeof(int)); 
+
+		if (matrizRegioes[i] == NULL)
 		{
-			mat[i][j] = (rand() % 32000);
+			printf("** Erro: Memória Insuficiente **");
+			return NULL;
+		}
+
+	}
+
+	/*Para cada elemento na matriz de regiões, iniciar com o valor 0*/
+
+	for (i = 0; i < QTD_MACR0BLOCO_LINHAS; i++)
+	{
+		for (j = 0; j < QTD_MACR0BLOCO_COLUNAS; j++)
+		{
+			matrizRegioes[i][j] = 0;
 		}
 	}
+
+	return matrizRegioes; /*Retorna a matriz de regiões*/
+
+}
+
+int** desalocarMatrizRegioes()
+{
+
+	int i;
+
+	if (matrizRegioes == NULL) return NULL; /*Caso a matriz de regiões for nula, retorna nulo*/
+
+	for (i = 0; i < QTD_MACR0BLOCO_LINHAS; i++) free(matrizRegioes[i]); /*Para cada elemento no vetor de linhas da matriz, de um free()*/
+
+	free(matrizRegioes); /*De um free() no vetor de linhas*/ 
+
+	return NULL; /*Retorne nulo*/
 
 }
 
@@ -217,11 +279,11 @@ void contagemSerial()
 	/*Para cada elemento presente na matriz, se o elemento
 	for primo, soma 1 ao contador de números primos*/
 
-	for (i = 0; i < LIN; i++)
+	for (i = 0; i < LINHA; i++)
 	{
-		for (j = 0; j < COL; j++)
+		for (j = 0; j < COLUNA; j++)
 		{
-			if (ehPrimo(mat[i][j])) contadorPrimos++;
+			if (ehPrimo(matriz[i][j])) contadorPrimos++;
 		}
 	}
 
@@ -267,31 +329,30 @@ void* contador(void* arg)
 
 	int contadorLocal = 0; /*Inicia um contador de números primos local*/
 
-
 	/*Se faz um laço for para a leitura compartilhada entre as threads da matriz de regiões de macroblocos*/
 
-	for (int macroLinhas = 0; macroLinhas < MACROLINHAS; macroLinhas++)
+	for (int macroLinhas = 0; macroLinhas < QTD_MACR0BLOCO_LINHAS; macroLinhas++)
 	{
-		for (int macroColunas = 0; macroColunas < MACROCOLUNAS; macroColunas++)
+		for (int macroColunas = 0; macroColunas < QTD_MACR0BLOCO_COLUNAS; macroColunas++)
 		{
 
 			pthread_mutex_lock(&mutex); /*Faz o lock (região crítica que faz modificação na matriz de regiões)*/
 
-			if (macroblocosProcessados[macroLinhas][macroColunas]) /*Caso o valor da matriz for igual a 1, significa que esse macrobloco já foi lido*/
+			if (matrizRegioes[macroLinhas][macroColunas]) /*Caso o valor da matriz for igual a 1, significa que esse macrobloco já foi lido*/
 			{
 				pthread_mutex_unlock(&mutex); 
 				
 				continue; /*Pula para o próximo valor (j+1)*/
 			}
 
-			macroblocosProcessados[macroLinhas][macroColunas] = 1; /*Caso o valor for 0, adiciona o valor 1 na matriz representando que essa região foi lida*/
+			matrizRegioes[macroLinhas][macroColunas] = 1; /*Caso o valor for 0, adiciona o valor 1 na matriz representando que essa região foi lida*/
 			
 			pthread_mutex_unlock(&mutex); /*Destrava o mutex da região crítica */
 
-			int linhaInicial = macroLinhas * MLIN; /*Linha inicial do macrobloco*/
-			int linhaFinal = linhaInicial + MLIN; /*Linha final do macrobloco*/
-			int colunaInicial = macroColunas * MCOL; /*Coluna inicial do macrobloco*/
-			int colunaFinal = colunaInicial + MCOL; /*Coluna final do macrobloco*/
+			int linhaInicial = macroLinhas * LIHNA_MACROBLOCO; /*Linha inicial do macrobloco*/ 
+			int linhaFinal = linhaInicial + LIHNA_MACROBLOCO; /*Linha final do macrobloco*/ 
+			int colunaInicial = macroColunas * COLUNA_MACROBLOCO; /*Coluna inicial do macrobloco*/ 
+			int colunaFinal = colunaInicial + COLUNA_MACROBLOCO; /*Coluna final do macrobloco*/ 
 
 			/*Leitura do macrobloco, somando ao contador local quando o valor for primo*/
 
@@ -299,7 +360,7 @@ void* contador(void* arg)
 			{
 				for (int j = colunaInicial; j < colunaFinal; j++)
 				{
-					if (ehPrimo(mat[i][j]))  
+					if (ehPrimo(matriz[i][j]))  
 					{
 						contadorLocal++;
 					}
