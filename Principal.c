@@ -13,13 +13,13 @@
 
 /*Definição da quantidade de linhas e colunas de uma matriz N x M*/
 
-#define LINHA 10000 
-#define COLUNA 10000 
+#define LINHA 20000 
+#define COLUNA 20000 
 
 /*Definição da quantidade de linhas e colunas do macrobloco*/
 
-#define LIHNA_MACROBLOCO 100
-#define COLUNA_MACROBLOCO 100
+#define LIHNA_MACROBLOCO 2
+#define COLUNA_MACROBLOCO 2
 
 /*Definição do numero de macroblocos por linha e coluna*/
 
@@ -37,7 +37,7 @@
 
 /*Definição da quantidade de Threads implementadas*/
 
-#define NUM_THREADS 4
+#define NUM_THREADS 8
 
 /*Variáveis globais (matriz e contador de números primos)*/
 
@@ -48,9 +48,10 @@ int contadorPrimos = 0;
 
 int** matrizRegioes;
 
-/*Variável global mutex*/
+/*Variáveis globais mutex*/
 
-pthread_mutex_t mutex;
+pthread_mutex_t contadorMutex;
+pthread_mutex_t macroblocoMutex;
 
 /*Funções usadas*/
 
@@ -70,7 +71,7 @@ int main(int argc, char* argv[])
 	clock_t tInicio, tFim;/*Cronometros de início e fim*/
 
 	matriz = alocarMatriz(); /*Aloca a memória para a matriz, inserindo os valores randomicos de 0 31999*/
-	matrizRegioes = alocarMatrizRegioes(); /*Aloca a memória para a matriz de regiões de cada macrobloco, inserindo o valor 0*/ 
+	matrizRegioes = alocarMatrizRegioes(); /*Aloca a memória para a matriz de regiões de cada macrobloco, inserindo o valor 0*/
 
 	tInicio = clock(); /*Inicia o cronômetro*/
 
@@ -94,10 +95,12 @@ int main(int argc, char* argv[])
 	tempo2 = (double)(tFim - tInicio) / CLOCKS_PER_SEC; /*Valor de segundos do primeiro tempo marcado*/
 
 	printf("Quantidade de elementos primos na matriz por busca paralela: %d\n", contadorPrimos);
-	printf("Tempo total de contagem: %f segundos\n", tempo2);
+	printf("Tempo total de contagem: %f segundos\n\n", tempo2);
 
 	matriz = desalocarMatriz(); /*Desaloca a memória da matriz*/
 	matrizRegioes = desalocarMatrizRegioes(); /*Desaloca a memória da matriz de regiões*/
+
+	system("PAUSE");
 
 	return 0;
 
@@ -291,7 +294,8 @@ void contagemParalela()
 
 	int i;
 
-	pthread_mutex_init(&mutex, NULL); /*Inicia o mutex*/
+	pthread_mutex_init(&contadorMutex, NULL); /*Inicia o mutex*/
+	pthread_mutex_init(&macroblocoMutex, NULL); /*Inicia o mutex*/
 
 	pthread_t tid[NUM_THREADS]; /*Vetor de indentificadores da Thread*/
 
@@ -317,7 +321,8 @@ void contagemParalela()
 
 	}
 
-	pthread_mutex_destroy(&mutex); /*Destroi o mutex*/
+	pthread_mutex_destroy(&contadorMutex); /*Destroi o mutex*/
+	pthread_mutex_destroy(&macroblocoMutex); /*Destroi o mutex*/
 
 }
 
@@ -335,18 +340,18 @@ void* contador(void* arg)
 		for (int macroColunas = 0; macroColunas < QTD_MACR0BLOCO_COLUNAS; macroColunas++)
 		{
 
-			pthread_mutex_lock(&mutex); /*Faz o lock (região crítica que faz modificação na matriz de regiões)*/
+			pthread_mutex_lock(&macroblocoMutex); /*Faz o lock (região crítica que faz modificação na matriz de regiões)*/
 
 			if (matrizRegioes[macroLinhas][macroColunas]) /*Caso o valor da matriz for igual a 1, significa que esse macrobloco já foi lido*/
 			{
-				pthread_mutex_unlock(&mutex);
+				pthread_mutex_unlock(&macroblocoMutex); 
 
 				continue; /*Pula para o próximo valor (j+1)*/
 			}
 
 			matrizRegioes[macroLinhas][macroColunas] = 1; /*Caso o valor for 0, adiciona o valor 1 na matriz representando que essa região foi lida*/
 
-			pthread_mutex_unlock(&mutex); /*Destrava o mutex da região crítica */
+			pthread_mutex_unlock(&macroblocoMutex); /*Destrava o mutex da região crítica */ 
 
 			int linhaInicial = macroLinhas * LIHNA_MACROBLOCO; /*Linha inicial do macrobloco*/
 			int linhaFinal = linhaInicial + LIHNA_MACROBLOCO; /*Linha final do macrobloco*/
@@ -368,10 +373,10 @@ void* contador(void* arg)
 		}
 	}
 
-	pthread_mutex_lock(&mutex); /*Faz o lock (região crítica que acrescenta o valor local ao valor global)*/
+	pthread_mutex_lock(&contadorMutex); /*Faz o lock (região crítica que acrescenta o valor local ao valor global)*/
 	contadorPrimos += contadorLocal;
-	pthread_mutex_unlock(&mutex); /*Destrava o mutex da região crítica */
+	pthread_mutex_unlock(&contadorMutex); /*Destrava o mutex da região crítica */
 
 	pthread_exit(0); /*Ternina a Thread, retornando 0*/
 
-}
+} 
