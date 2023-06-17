@@ -13,13 +13,13 @@
 
 /*Definição da quantidade de linhas e colunas de uma matriz N x M*/
 
-#define LINHA 20000 
-#define COLUNA 20000 
+#define LINHA 15000 
+#define COLUNA 15000 
 
 /*Definição da quantidade de linhas e colunas do macrobloco*/
 
-#define LIHNA_MACROBLOCO 2
-#define COLUNA_MACROBLOCO 2
+#define LIHNA_MACROBLOCO 100
+#define COLUNA_MACROBLOCO 100
 
 /*Definição do numero de macroblocos por linha e coluna*/
 
@@ -67,7 +67,7 @@ void* contador(void*);
 int main(int argc, char* argv[])
 {
 
-	double tempo1, tempo2;/*Tempo marcado de cada contagem*/
+	double tempo;/*Tempo marcado de cada contagem*/
 	clock_t tInicio, tFim;/*Cronometros de início e fim*/
 
 	matriz = alocarMatriz(); /*Aloca a memória para a matriz, inserindo os valores randomicos de 0 31999*/
@@ -79,10 +79,11 @@ int main(int argc, char* argv[])
 
 	tFim = clock(); /*Termina o cronômetro*/
 
-	tempo1 = (double)(tFim - tInicio) / CLOCKS_PER_SEC; /*Valor de segundos do primeiro tempo marcado*/
+	tempo = (double)(tFim - tInicio) / CLOCKS_PER_SEC; /*Valor de segundos do primeiro tempo marcado*/
 
 	printf("Quantidade de elementos primos na matriz por busca serial: %d\n", contadorPrimos);
-	printf("Tempo total de contagem: %f segundos\n\n", tempo1);
+	printf("Tamanho da matriz: %d X %d\n", LINHA, COLUNA);
+	printf("Tempo total de contagem: %f segundos\n\n", tempo);
 
 	contadorPrimos = 0; /*Zera o contador de números primos*/
 
@@ -92,10 +93,13 @@ int main(int argc, char* argv[])
 
 	tFim = clock(); /*Termina o cronômetro*/
 
-	tempo2 = (double)(tFim - tInicio) / CLOCKS_PER_SEC; /*Valor de segundos do primeiro tempo marcado*/
+	tempo = (double)(tFim - tInicio) / CLOCKS_PER_SEC; /*Valor de segundos do primeiro tempo marcado*/
 
 	printf("Quantidade de elementos primos na matriz por busca paralela: %d\n", contadorPrimos);
-	printf("Tempo total de contagem: %f segundos\n\n", tempo2);
+	printf("Tamanho da matriz: %d X %d\n", LINHA, COLUNA); 
+	printf("Tamanho do macrobloco: %d X %d\n", LIHNA_MACROBLOCO, COLUNA_MACROBLOCO); 
+	printf("Número de threads: %d\n", NUM_THREADS); 
+	printf("Tempo total de contagem: %f segundos\n\n", tempo);
 
 	matriz = desalocarMatriz(); /*Desaloca a memória da matriz*/
 	matrizRegioes = desalocarMatrizRegioes(); /*Desaloca a memória da matriz de regiões*/
@@ -344,14 +348,14 @@ void* contador(void* arg)
 
 			if (matrizRegioes[macroLinhas][macroColunas]) /*Caso o valor da matriz for igual a 1, significa que esse macrobloco já foi lido*/
 			{
-				pthread_mutex_unlock(&macroblocoMutex); 
+				pthread_mutex_unlock(&macroblocoMutex);
 
 				continue; /*Pula para o próximo valor (j+1)*/
 			}
 
 			matrizRegioes[macroLinhas][macroColunas] = 1; /*Caso o valor for 0, adiciona o valor 1 na matriz representando que essa região foi lida*/
 
-			pthread_mutex_unlock(&macroblocoMutex); /*Destrava o mutex da região crítica */ 
+			pthread_mutex_unlock(&macroblocoMutex); /*Destrava o mutex da região crítica */
 
 			int linhaInicial = macroLinhas * LIHNA_MACROBLOCO; /*Linha inicial do macrobloco*/
 			int linhaFinal = linhaInicial + LIHNA_MACROBLOCO; /*Linha final do macrobloco*/
@@ -379,4 +383,4 @@ void* contador(void* arg)
 
 	pthread_exit(0); /*Ternina a Thread, retornando 0*/
 
-} 
+}
